@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import quad
 
-from signal_utils import call_boc, call_bpsk, f0
+from signal_utils import call_boc, call_bpsk, f0, call_cboc, call_altboc
 
 pi = np.pi
 SPEED_OF_LIGHT = 299792458  # [m/s]
@@ -78,42 +78,96 @@ def dll_measurement_error(psd_fun, Tc, Bfe, Bn, T, D, C_N_dB) -> float:
 
 def main():
 
-    ########################
-    #       BPSK(n)        #
-    ########################
+    # Receiver stats:
+    Bfe_E1 = 16E6  # typical value for L1 and L2 signals
+    Bfe_E5 = 50E6
+    Bfe_E6 = 40E6
+    Bn = 0.1
+    T = 30E-3
+    D = 1
+
+    ###########################################################################
+    #       E1 band (OS uses CBOC(6,1,1/11), PRS uses cos BOC(15,2.5))        #
+    ###########################################################################
+
+    # -> CBOC(6,1,1/11)
+    n_s = 6
+    n_c = 1
+    ratio = 1/11
+
+    fc = n_c * f0
+    Tc = 1.0 / fc  # chip period [s]
+    psd_fun = lambda f: call_cboc(f, n_s, n_c, ratio)
+    C_N = np.arange(20, 45, 1)
+    sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E1, Bn, T, D, x) for x in C_N]
+    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
+         title=f"Delay Lock Loop Error for CBOC(6,1,1/11) - E1 OS")
+
+    # -> cos BOC(15,2.5)
+    n_s = 15
+    n_c = 2.5
+
+    fc = n_c * f0
+    Tc = 1.0 / fc  # chip period [s]
+    psd_fun = lambda f: call_boc(f, True, n_s, n_c)
+    C_N = np.arange(20, 45, 1)
+    sigma = [dll_measurement_error(psd_fun, Tc, 80*f0, Bn, T, D, x) for x in C_N]
+    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
+         title=f"Delay Lock Loop Error for cos BOC(15,2.5)) - E1 PRS")
+
+    #
+
+    ###########################################
+    #       E5 band uses AltBOC(15,10)        #
+    ###########################################
+    n_s = 15
+    n_c = 10
+
+    fc = n_c * f0
+    Tc = 1.0 / fc  # chip period [s]
+    psd_fun = lambda f: call_altboc(f, n_s, n_c)
+    C_N = np.arange(20, 45, 1)
+    sigma = [dll_measurement_error(psd_fun, Tc, 70 * f0, Bn, T, D, x) for x in C_N]
+    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
+         title=f"Delay Lock Loop Error for AltBOC(15,10) - E5 PRS")
+
+    #
+
+    #####################################################################
+    #       E6 band (CS uses BPSK(5) and PRS uses cos BOC(10,5))        #
+    #####################################################################
+    # -> BPSK(5)
     n = 5
     fc = n * f0
 
     Tc = 1.0 / fc  # chip period [s]
-    Bfe = 1.7E6  # typical value for L1-L2 signals
     Bn = 0.1
     psd_fun = lambda f: call_bpsk(f, n)
     T = 30E-3
     D = 1
-    C_N = np.arange(10, 30, 1)
+    C_N = np.arange(10, 45, 1)
 
-    sigma = [dll_measurement_error(psd_fun, Tc, Bfe, Bn, T, D, x) for x in C_N]
-    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]", title=f"Delay Lock Loop Error for BPSK({n})")
+    sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E6, Bn, T, D, x) for x in C_N]
+    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
+         title=f"Delay Lock Loop Error for BPSK(5) - E6 CS")
 
-
-    ########################
-    #    BOC(n_s,n_c)      #
-    ########################
-
+    # -> cos BOC(10,5)
     n_s = 10
     n_c = 5
     fc = n_c * f0
 
     Tc = 1.0 / fc  # chip period [s]
-    Bfe = 3E7  # typical value for L1-L2 signals
     Bn = 0.1
-    psd_fun = lambda f: call_boc(f, False, n_s, n_c)
+    psd_fun = lambda f: call_boc(f, True, n_s, n_c)
     T = 0.01
-    D = 1/8
-    C_N = np.arange(10, 30, 1)
+    D = 1 / 8
+    C_N = np.arange(10, 45, 1)
 
-    sigma = [dll_measurement_error(psd_fun, Tc, Bfe, Bn, T, D, x) for x in C_N]
-    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]", title=f"Delay Lock Loop Error for BOC({n_s},{n_c})")
+    sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E6, Bn, T, D, x) for x in C_N]
+    plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
+         title=f"Delay Lock Loop Error for cos BOC(10,5) - E6 PRS")
+
+    #
 
     show()
 

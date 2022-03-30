@@ -167,3 +167,34 @@ def call_boc(f, cos, n_s, n_c):
                     1 - _tmp) ** 2 / _tmp ** 2
 
     return psd
+
+
+def call_cboc(f, n_s, n_c, ratio):
+    psd_1 = call_boc(f, False, 1, 1)
+    psd_2 = call_boc(f, False, n_s, n_c)
+
+    psd = (1 - ratio) * psd_1 + ratio * psd_2
+
+    return psd
+
+
+def call_altboc(f, n_s, n_c):
+    # get BOC ratio integer
+    n = int(2 * n_s / n_c)
+
+    # check if integer ratio is even or odd
+    even = True if n % 2 == 0 else False
+
+    if even is True:
+        # 2 * n_s / n_c is even
+        psd = 8 * n_c * f0 * np.sin(np.pi * f / n_c / f0) ** 2 / (
+                np.pi * f) ** 2 / (np.cos(np.pi * f / 2 / n_s / f0)) ** 2 * (
+                      1 - np.cos(np.pi * f / 2 / n_s / f0))
+
+    else:
+        # 2 * n_s / n_c is odd
+        psd = 8 * n_c * f0 * np.cos(np.pi * f / n_c / f0) ** 2 / (
+                np.pi * f) ** 2 / (np.cos(np.pi * f / 2 / n_s / f0)) ** 2 * (
+                      1 - np.cos(np.pi * f / 2 / n_s / f0))
+
+    return psd
