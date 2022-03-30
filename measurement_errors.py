@@ -79,9 +79,6 @@ def dll_measurement_error(psd_fun, Tc, Bfe, Bn, T, D, C_N_dB) -> float:
 def main():
 
     # Receiver stats:
-    Bfe_E1 = 16E6  # typical value for L1 and L2 signals
-    Bfe_E5 = 50E6
-    Bfe_E6 = 40E6
     Bn = 0.1
     T = 30E-3
     D = 1
@@ -89,6 +86,8 @@ def main():
     ###########################################################################
     #       E1 band (OS uses CBOC(6,1,1/11), PRS uses cos BOC(15,2.5))        #
     ###########################################################################
+
+    Bfe_E1 = 16E6
 
     # -> CBOC(6,1,1/11)
     n_s = 6
@@ -106,12 +105,13 @@ def main():
     # -> cos BOC(15,2.5)
     n_s = 15
     n_c = 2.5
+    Bfe_E1 = 80*f0
 
     fc = n_c * f0
     Tc = 1.0 / fc  # chip period [s]
     psd_fun = lambda f: call_boc(f, True, n_s, n_c)
     C_N = np.arange(20, 45, 1)
-    sigma = [dll_measurement_error(psd_fun, Tc, 80*f0, Bn, T, D, x) for x in C_N]
+    sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E1, Bn, T, D, x) for x in C_N]
     plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
          title=f"Delay Lock Loop Error for cos BOC(15,2.5)) - E1 PRS")
 
@@ -122,12 +122,13 @@ def main():
     ###########################################
     n_s = 15
     n_c = 10
+    Bfe_E5 = 70 * f0
 
     fc = n_c * f0
     Tc = 1.0 / fc  # chip period [s]
     psd_fun = lambda f: call_altboc(f, n_s, n_c)
     C_N = np.arange(20, 45, 1)
-    sigma = [dll_measurement_error(psd_fun, Tc, 70 * f0, Bn, T, D, x) for x in C_N]
+    sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E5, Bn, T, D, x) for x in C_N]
     plot(C_N, sigma, xlabel="C/N0 [dB-Hz]", ylabel="DLL Error [m]",
          title=f"Delay Lock Loop Error for AltBOC(15,10) - E5 PRS")
 
@@ -139,12 +140,10 @@ def main():
     # -> BPSK(5)
     n = 5
     fc = n * f0
+    Bfe_E6 = 40E6
 
     Tc = 1.0 / fc  # chip period [s]
-    Bn = 0.1
     psd_fun = lambda f: call_bpsk(f, n)
-    T = 30E-3
-    D = 1
     C_N = np.arange(10, 45, 1)
 
     sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E6, Bn, T, D, x) for x in C_N]
@@ -155,12 +154,11 @@ def main():
     n_s = 10
     n_c = 5
     fc = n_c * f0
-
-    Tc = 1.0 / fc  # chip period [s]
-    Bn = 0.1
-    psd_fun = lambda f: call_boc(f, True, n_s, n_c)
     T = 0.01
     D = 1 / 8
+
+    Tc = 1.0 / fc  # chip period [s]
+    psd_fun = lambda f: call_boc(f, True, n_s, n_c)
     C_N = np.arange(10, 45, 1)
 
     sigma = [dll_measurement_error(psd_fun, Tc, Bfe_E6, Bn, T, D, x) for x in C_N]
